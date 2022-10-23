@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Change dir
-cd /ci
+# Create and change dir
+mkdir -p /ci/tmp
+cd /ci/tmp
 
 # Use aria2 for cc
 down () {
