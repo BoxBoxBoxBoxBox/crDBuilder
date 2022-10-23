@@ -1,0 +1,17 @@
+env:
+  WORKDIR: "/ci"
+  CIRRUS_CLONE_DEPTH: "1"
+
+task:
+  name: "Builder"
+  timeout_in: 120m
+  container:
+    image: ghcr.io/sushrut1101/docker:arch
+    cpu: 8
+    memory: 32G
+  
+  Load-Cc_background_script:
+     - bash load_cc.sh
+  
+  Build_script:
+     - bash build.sh
