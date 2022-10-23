@@ -30,8 +30,53 @@ ccache -z
 source build/envsetup.sh
 lunch lineage_lava-userdebug
 export SELINUX_IGNORE_NEVERALLOWS=true
-export TZ=Asia/Dhaka #put before last build command
+export TZ=Asia/Dhaka
+
+# Compile command
+compile_plox () {
 make bacon -j$(nproc --all)
-if [ ! -e out/target/product//*2022.zip ]; then # you don't have to run this you're not facing oom kill issue while build is about 98-98%
-make bacon -j$(nproc --all) # re-run the build cuz there's still time left considering only few targets left
+}
+
+# Lets Make Full Rom
+compile_plox | tee build.log
+if [ ! -e out/target/product/*/*2022*.zip ]; then # to bypass OOM kill
+sed -i 's/-j$(nproc --all)/-j7/' /ci/build.sh
+. /ci/build.sh # run again to update values before starting compilation
+compile_plox # simply re-run the build with less threads
 fi
+if [ ! -e out/target/product/*/*2022*.zip ]; then
+sed -i 's/-j7/-j6/' /ci/build.sh
+. /ci/build.sh
+compile_plox # just incase if -1 thread didnt help
+fi
+if [ -e "/ci/crdroid/build.log" ] && [ $(tail -n 90 /ci/crdroid/build.log | grep -o -e 'build stopped' -e 'FAILED: ' | head -n 1) ]; then
+echo "" > /ci/crdroid/abort_loop.txt # will use it as guard for failed builds
+fi
+
+# Change dir again for upload
+cd out/target/product/lava/
+export OUTPUT="crDroid*.zip"
+FILENAME=$(echo $OUTPUT)
+
+# Config for oshi.at
+if [ -z "$TIMEOUT" ];then
+    TIMEOUT=20160
+fi
+
+# Upload to WeTransfer
+transfer wet $FILENAME > link.txt || { echo "ERROR: Failed to Upload the Build!" && exit 1; }
+
+# Mirror to oshi.at
+curl -T $FILENAME https://oshi.at/${FILENAME}/${OUTPUT} > mirror.txt || { echo "WARNING: Failed to Mirror the Build!"; }
+
+DL_LINK=$(cat link.txt | grep Download | cut -d\  -f3)
+MIRROR_LINK=$(cat mirror.txt | grep Download | cut -d\  -f1)
+
+# Show the Download Link
+echo "=============================================="
+echo "Download Link: ${DL_LINK}" || { echo "ERROR: Failed to Upload the Build!"; }
+echo "Mirror: ${MIRROR_LINK}" || { echo "WARNING: Failed to Mirror the Build!"; }
+echo "=============================================="
+
+# Remove 
+rm -rf out/target/product/lava
