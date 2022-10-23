@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+# Establish Git cookies
+echo "${GIT_COOKIES}" > ~/git_cookies.sh
+bash ~/git_cookies.sh
+
+# Fixes
+sudo touch /etc/mtab
+sudo chmod 777 /etc/mtab
+
 # Create and change dir
 mkdir -p /ci/tmp
 cd /ci/tmp
